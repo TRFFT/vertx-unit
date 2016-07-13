@@ -1,5 +1,6 @@
 package io.vertx.ext.unit.junit;
 
+import io.vertx.ext.unit.impl.TestContextImpl;
 import junitparams.JUnitParamsRunner;
 import junitparams.internal.ParameterisedTestClassRunner;
 import junitparams.internal.ParametrizedTestMethodsFilter;
@@ -19,6 +20,9 @@ import java.util.List;
 
 public class VertxJUnitParamsRunner extends VertxUnitRunner {
     
+//    private final Object[] parameters;
+//    private final String name;
+    
     private JUnitParamsRunner junitParamsRunner;
 
 	private ParametrizedTestMethodsFilter parametrizedTestMethodsFilter;
@@ -30,6 +34,8 @@ public class VertxJUnitParamsRunner extends VertxUnitRunner {
         parameterisedRunner = new ParameterisedTestClassRunner(getTestClass());
         junitParamsRunner = new JUnitParamsRunner(klass);
         parametrizedTestMethodsFilter = new ParametrizedTestMethodsFilter(junitParamsRunner);
+//        parameters = test.getParameters().toArray(new Object[test.getParameters().size()]);
+//            name = test.getName();
     }
     
     @Override
@@ -55,14 +61,14 @@ public class VertxJUnitParamsRunner extends VertxUnitRunner {
             parameterisedRunner.runParameterisedTest(testMethod, methodBlock(method), notifier);
         }
         else{
-            verifyMethodCanBeRunByStandardRunner(testMethod);
+            verifyMethodCanBeRunByVertxRunner(testMethod);
             super.runChild(method, notifier);
         }
     }
-
-    private void verifyMethodCanBeRunByStandardRunner(TestMethod testMethod) {
+    
+    private void verifyMethodCanBeRunByVertxRunner(TestMethod testMethod) {
         List<Throwable> errors = new ArrayList<Throwable>();
-        testMethod.frameworkMethod().validatePublicVoidNoArg(false, errors);
+        testMethod.frameworkMethod().validatePublicVoid(false, errors);
         if (!errors.isEmpty()) {
             throw new RuntimeException(errors.get(0));
         }
@@ -83,12 +89,28 @@ public class VertxJUnitParamsRunner extends VertxUnitRunner {
 
     @Override
     protected Statement methodInvoker(FrameworkMethod method, Object test) {
+        TestContextImpl ctx = testContext;
+        // TODO: Special VertxParameterisedRunner
         Statement methodInvoker = parameterisedRunner.parameterisedMethodInvoker(method, test);
-        if (methodInvoker == null)
-            methodInvoker = super.methodInvoker(method, test);
-
-        return methodInvoker;
+        if (methodInvoker == null) { // not-parameterized test
+            // Invoke normal Vertx Unit method
+            methodInvoker = new Statement() {
+                @Override
+                public void evaluate() throws Throwable {
+                    invokeExplosively(ctx, method, test);
+                }; 
+            };
+//            methodInvoker = super.methodInvoker(method, test);
+        }
+        return methodInvoker; 
     }
+    
+//    private Statement buildMethodInvoker(FrameworkMethod method, Object testClass, TestMethod testMethod) {
+//        ParameterisedTestMethodRunner parameterisedMethod = parameterisedMethods.get(testMethod);
+//
+//        return new InvokeParameterisedMethod(
+//                method, testClass, parameterisedMethod.currentParamsFromAnnotation(), parameterisedMethod.count());
+//    }
 
     @Override
     public Description getDescription() {

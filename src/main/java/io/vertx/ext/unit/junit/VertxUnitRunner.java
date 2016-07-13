@@ -108,7 +108,7 @@ public class VertxUnitRunner extends BlockJUnit4ClassRunner {
     return timeout;
   }
 
-  private void invokeExplosively(TestContextImpl testContext, FrameworkMethod fMethod, Object test) throws Throwable {
+  protected void invokeExplosively(TestContextImpl testContext, FrameworkMethod fMethod, Object test) throws Throwable {
     Handler<TestContext> callback = context -> {
       try {
         invokeTestMethod(fMethod, test, context);
@@ -144,7 +144,7 @@ public class VertxUnitRunner extends BlockJUnit4ClassRunner {
     }
   }
 
-  private TestContextImpl testContext;
+  protected TestContextImpl testContext;
 
   @Override
   protected Statement methodBlock(FrameworkMethod method) {
